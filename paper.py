@@ -11,6 +11,7 @@ from pdfminer.converter import PDFPageAggregator
 from wand.image import Image
 
 from question import Question
+from util import find_between
 
 class InvalidFilenameError(Exception):
     pass
@@ -32,6 +33,7 @@ class Paper():
 
 
     def _extract_pdf(self, file_name):
+        mark_sum = 0
         print "Extracting PDF"
         # Load pdf
         laparams = LAParams()
@@ -49,10 +51,30 @@ class Paper():
             # Look for start of working out box        
             work_out_y = 0
             textboxes = [r for r in layout._objs if type(r) is LTTextBoxHorizontal ]
+
+            # if q_num == 6:
+            #     for r in layout._objs:
+            #         print r
+
+            marks = []
             for t in textboxes:
-                if t.get_text().startswith("Answer space for question"):
+                text = t.get_text()
+                if "Answer space for question" in text:
                     work_out_y = int(t.y0)
-            
+                elif "marks]" in text:
+                    marks.extend(find_between(text, "[", " marks]"))
+                elif "mark]" in text:
+                    marks.extend(find_between(text, "[", " mark]"))
+                elif "......" in text:
+                    # TODO: Find the correct amount of dots
+                    pass
+                else:
+                    pass
+                    # if q_num == 6:
+                    #     print repr(text)
+            marks = [int(m) for m in marks]
+            mark_sum += sum(marks)
+
             # Comver page into image
             img_path = "{}[{}]".format(file_name, i)
             img = Image(filename=img_path, resolution=int(72*Paper.QUALITY))
@@ -74,11 +96,13 @@ class Paper():
             img.save(filename=img_path)
             
             # Add question to questions
-            self._questions.append(Question(img_path))
+            self._questions.append(Question(img_path, marks))
 
         # Save class as pickle file
         pickle_path = os.path.join(self._folder, 'paper.pkl')
         pickle.dump(self, open(pickle_path, "wb"))
+
+        print "Marks: {}".format(mark_sum)
 
     def get_month(self):
         return self._month

@@ -19,7 +19,7 @@ class InvalidFilenameError(Exception):
 class Paper():
     MONTH_REGEX = re.compile(r'(JAN|JUN)')
     YEAR_REGEX = re.compile(r'\d\d')
-    QUALITY = 3
+    QUALITY = 1
 
     def __init__(self, file_name, out_folder="/"):
         self._month = Paper.MONTH_REGEX.findall(file_name)[:-1]
@@ -48,15 +48,12 @@ class Paper():
             interpreter.process_page(page)
             layout = device.get_result()
 
-            # Look for start of working out box        
-            work_out_y = 0
+
+            # Extract metadata
             textboxes = [r for r in layout._objs if type(r) is LTTextBoxHorizontal ]
-
-            # if q_num == 6:
-            #     for r in layout._objs:
-            #         print r
-
+            work_out_y = 0
             marks = []
+            answer_header = 0
             for t in textboxes:
                 text = t.get_text()
                 if "Answer space for question" in text:
@@ -68,8 +65,14 @@ class Paper():
                 elif "......" in text:
                     # TODO: Find the correct amount of dots
                     pass
-                else:
+                elif text in ["QUESTION\n", "PART\n", "REFERENCE\n"]:
                     pass
+                elif text in ["Do not write\noutside the\n", "box\n", "Turn over s\n"]:
+                    pass
+                elif text == "Answer all questions.\n":
+                    answer_header = 74
+                else:
+                    print repr(text)
                     # if q_num == 6:
                     #     print repr(text)
             marks = [int(m) for m in marks]
@@ -81,9 +84,9 @@ class Paper():
             
             # Set crop positions
             x = 46 * Paper.QUALITY
-            y = 66 * Paper.QUALITY
+            y = (66 + answer_header) * Paper.QUALITY
             width = 489 * Paper.QUALITY
-            height = (761 - work_out_y) * Paper.QUALITY
+            height = (761 - answer_header - work_out_y) * Paper.QUALITY
             
             # Check for blank pages
             if height <= Paper.QUALITY or work_out_y <= 0:

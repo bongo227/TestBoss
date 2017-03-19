@@ -18,7 +18,7 @@ class InvalidFilenameError(Exception):
 class Paper():
     MONTH_REGEX = re.compile(r'(JAN|JUN)')
     YEAR_REGEX = re.compile(r'\d\d')
-    QUALITY = 1
+    QUALITY = 3
 
     def __init__(self, file_name, out_folder="/"):
         self._month = Paper.MONTH_REGEX.findall(file_name)[:-1]
@@ -52,27 +52,31 @@ class Paper():
             for t in textboxes:
                 if t.get_text().startswith("Answer space for question"):
                     work_out_y = int(t.y0)
-
             
+            # Comver page into image
             img_path = "{}[{}]".format(file_name, i)
-
             img = Image(filename=img_path, resolution=int(72*Paper.QUALITY))
-            # Crop the margins
+            
+            # Set crop positions
             x = 46 * Paper.QUALITY
             y = 66 * Paper.QUALITY
             width = 489 * Paper.QUALITY
-            height = 711 * Paper.QUALITY
-            # Crop the working out space
-            height -= (work_out_y - 50) * Paper.QUALITY
+            height = (761 - work_out_y) * Paper.QUALITY
             
-            if height > Paper.QUALITY and work_out_y > 0:
-                q_num += 1
-                img.crop(x, y, width=width, height=height)
-                img_path = os.path.join(self._folder, "q{}.jpg".format(q_num))
-                img.save(filename=img_path)
-                self._questions.append(Question(img_path))
+            # Check for blank pages
+            if height <= Paper.QUALITY or work_out_y <= 0:
+                continue
+            
+            # Crop and save the image
+            q_num += 1
+            img.crop(x, y, width=width, height=height)
+            img_path = os.path.join(self._folder, "q{}.jpg".format(q_num))
+            img.save(filename=img_path)
+            
+            # Add question to questions
+            self._questions.append(Question(img_path))
 
-
+        # Save class as pickle file
         pickle_path = os.path.join(self._folder, 'paper.pkl')
         pickle.dump(self, open(pickle_path, "wb"))
 

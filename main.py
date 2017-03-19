@@ -2,7 +2,6 @@ import os
 import pickle
 from subprocess import call
 
-from pdf import process_pdf
 from paper import Paper
 
 folder_path = 'papers/'
